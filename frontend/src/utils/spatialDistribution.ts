@@ -21,8 +21,8 @@ export function distributeFilesInSpace(files: FileData[]): FileData[] {
   const minSize = Math.min(...sizes);
   const maxSize = Math.max(...sizes);
   
-  const innerRadius = 20;
-  const outerRadius = 500;
+  const innerRadius = 7;
+  const outerRadius = 70;
 
   return files.map((file, index) => {
     const random = seededRandom(hashString(file.id));
