@@ -2,7 +2,7 @@ import { Suspense, useEffect, useRef } from 'react';
 import { useThree, useFrame } from '@react-three/fiber';
 import { Stars } from '@react-three/drei';
 import { EffectComposer, ToneMapping } from '@react-three/postprocessing';
-import { Fog, Vector3 } from 'three';
+import { Fog, Vector3, Color } from 'three';
 import { FileCloud } from './FileCloud';
 import { useFileLoader } from '../hooks/useFileLoader';
 import { useWebSocket } from '../hooks/useWebSocket';
@@ -27,8 +27,15 @@ export function Scene() {
   useWebSocket();
 
   useEffect(() => {
-    scene.fog = new Fog(0x050510, 100, 800);
-    scene.background = null;
+    // Deep space navy/black background
+    scene.background = new Color('#020205');
+    // Dark hazy fog allowing visibility of distant glowing objects
+    scene.fog = new Fog('#050510', 100, 900);
+
+    return () => {
+      scene.background = null;
+      scene.fog = null;
+    };
   }, [scene]);
 
   // ESC to clear focus
@@ -171,10 +178,15 @@ export function Scene() {
 
   return (
     <>
-      <ambientLight intensity={0.3} />
-      <pointLight position={[100, 100, 100]} intensity={0.8} color="#ffffff" />
-      <pointLight position={[-100, -50, -100]} intensity={0.4} color="#4a9eff" />
-      <pointLight position={[0, 0, 0]} intensity={0.2} color="#ff6b4a" />
+      <ambientLight intensity={0.2} color="#101030" />
+
+      {/* Central bright soft light */}
+      <pointLight position={[0, 0, 0]} intensity={1.5} color="#fff8e7" distance={300} decay={2} />
+
+      {/* Nebula colored ambient glow lights */}
+      <pointLight position={[100, 50, -100]} intensity={2} color="#00ffff" distance={400} decay={2.5} /> {/* Cyan */}
+      <pointLight position={[-120, -40, 60]} intensity={2} color="#ff4500" distance={400} decay={2.5} /> {/* Burnt Orange */}
+      <pointLight position={[50, 100, 80]} intensity={1.5} color="#8a2be2" distance={350} decay={2.5} /> {/* Violet */}
 
       <ParallaxStarfield />
 
@@ -201,30 +213,28 @@ function ParallaxStarfield() {
 
     // Parallax based on camera position
     if (groupRef.current) {
-      groupRef.current.position.x = -camera.position.x * 0.02;
-      groupRef.current.position.y = -camera.position.y * 0.02;
-      groupRef.current.position.z = -camera.position.z * 0.02;
+      groupRef.current.position.x = -camera.position.x * 0.05; // Slightly increased parallax
+      groupRef.current.position.y = -camera.position.y * 0.05;
+      groupRef.current.position.z = -camera.position.z * 0.05;
     }
 
     // Slow rotation
     if (stars1Ref.current) {
-      stars1Ref.current.rotation.y = time * 0.005;
-      stars1Ref.current.rotation.x = time * 0.002;
+      stars1Ref.current.rotation.y = time * 0.02;
     }
     if (stars2Ref.current) {
-      stars2Ref.current.rotation.y = time * 0.003;
-      stars2Ref.current.rotation.x = time * 0.001;
+      stars2Ref.current.rotation.y = time * 0.015;
     }
     if (stars3Ref.current) {
-      stars3Ref.current.rotation.y = time * 0.002;
+      stars3Ref.current.rotation.y = time * 0.01;
     }
   });
 
   return (
     <group ref={groupRef}>
-      <Stars ref={stars1Ref} radius={800} depth={100} count={3000} factor={3} fade speed={0.3} />
-      <Stars ref={stars2Ref} radius={1200} depth={150} count={2000} factor={5} fade speed={0.2} />
-      <Stars ref={stars3Ref} radius={1800} depth={200} count={1500} factor={7} fade speed={0.1} />
+      <Stars ref={stars1Ref} radius={300} depth={50} count={6000} factor={4} saturation={1} fade speed={1} />
+      <Stars ref={stars2Ref} radius={600} depth={100} count={4000} factor={6} saturation={1} fade speed={1} />
+      <Stars ref={stars3Ref} radius={900} depth={100} count={2000} factor={8} saturation={1} fade speed={1} />
     </group>
   );
 }
