@@ -1,6 +1,6 @@
 import { useRef, useEffect, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
-import { Vector3, AdditiveBlending, Mesh, DoubleSide, PlaneGeometry } from 'three';
+import { Vector3, AdditiveBlending, Mesh, DoubleSide } from 'three';
 import { Image, Text, useTexture } from '@react-three/drei';
 import { useStore, FileData } from '../store';
 

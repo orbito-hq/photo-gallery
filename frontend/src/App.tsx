@@ -1,6 +1,7 @@
 import { Canvas } from '@react-three/fiber';
 import { Scene } from './components/Scene';
 import { UI } from './components/UI';
+import { WebcamOverlay } from './components/WebcamOverlay';
 import { useStore } from './store';
 import { useEffect, useRef } from 'react';
 
@@ -88,6 +89,7 @@ function App() {
         <Scene />
       </Canvas>
       <VRButton />
+      <WebcamOverlay />
       <UI />
     </>
   );
