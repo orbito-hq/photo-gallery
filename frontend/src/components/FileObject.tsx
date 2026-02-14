@@ -1,7 +1,7 @@
 import { useRef, useEffect, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
-import { Mesh, Vector3, TextureLoader, Texture, AdditiveBlending } from 'three';
-import { Text, Billboard } from '@react-three/drei';
+import { Vector3, AdditiveBlending } from 'three';
+import { Html } from '@react-three/drei';
 import { useStore, FileData } from '../store';
 
 interface FileObjectProps {
@@ -19,16 +19,51 @@ const FILE_COLORS: Record<string, string> = {
   image: '#4a9eff'
 };
 
-// File type icons (simple text representations)
-const FILE_ICONS: Record<string, string> = {
-  video: '▶',
-  text: '≡',
-  binary: '⬡',
-  image: '◻'
+// SVG Icons for file types
+const VideoIcon = ({ color, size }: { color: string; size: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect x="2" y="4" width="20" height="16" rx="2" stroke={color} strokeWidth="2" fill="rgba(0,0,0,0.3)"/>
+    <polygon points="10,8 16,12 10,16" fill={color}/>
+  </svg>
+);
+
+const TextIcon = ({ color, size }: { color: string; size: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M4 4h16v16H4V4z" stroke={color} strokeWidth="2" fill="rgba(0,0,0,0.3)" rx="1"/>
+    <line x1="7" y1="8" x2="17" y2="8" stroke={color} strokeWidth="2"/>
+    <line x1="7" y1="12" x2="15" y2="12" stroke={color} strokeWidth="2"/>
+    <line x1="7" y1="16" x2="12" y2="16" stroke={color} strokeWidth="2"/>
+  </svg>
+);
+
+const BinaryIcon = ({ color, size }: { color: string; size: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect x="3" y="2" width="18" height="20" rx="2" stroke={color} strokeWidth="2" fill="rgba(0,0,0,0.3)"/>
+    <text x="7" y="10" fill={color} fontSize="6" fontFamily="monospace">01</text>
+    <text x="7" y="16" fill={color} fontSize="6" fontFamily="monospace">10</text>
+  </svg>
+);
+
+const ImageIcon = ({ color, size }: { color: string; size: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect x="3" y="3" width="18" height="18" rx="2" stroke={color} strokeWidth="2" fill="rgba(0,0,0,0.3)"/>
+    <circle cx="8" cy="8" r="2" fill={color}/>
+    <path d="M21 15l-5-5-4 4-3-3-6 6v2a2 2 0 002 2h14a2 2 0 002-2v-4z" fill={color} opacity="0.5"/>
+  </svg>
+);
+
+const FileIcon = ({ type, size }: { type: string; size: number }) => {
+  const color = FILE_COLORS[type] || '#4a9eff';
+  switch (type) {
+    case 'video': return <VideoIcon color={color} size={size} />;
+    case 'text': return <TextIcon color={color} size={size} />;
+    case 'binary': return <BinaryIcon color={color} size={size} />;
+    case 'image': return <ImageIcon color={color} size={size} />;
+    default: return <BinaryIcon color={color} size={size} />;
+  }
 };
 
 export function FileObject({ file, lod }: FileObjectProps) {
-  const meshRef = useRef<Mesh>(null);
   const groupRef = useRef<any>(null);
   const { 
     thumbnails, setThumbnail, markLoaded, 
@@ -36,8 +71,8 @@ export function FileObject({ file, lod }: FileObjectProps) {
     selectedFileId, hoveredFileId, isFocused 
   } = useStore();
   const { camera } = useThree();
-  const [textureUrl, setTextureUrl] = useState<string | null>(null);
-  const [texture, setTexture] = useState<Texture | null>(null);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [imageLoaded, setImageLoaded] = useState(false);
   const [hoverScale, setHoverScale] = useState(1);
   const thumbnailUrl = thumbnails.get(file.id);
   
@@ -46,47 +81,24 @@ export function FileObject({ file, lod }: FileObjectProps) {
   const isImage = file.type === 'image';
   const fileColor = FILE_COLORS[file.type] || '#4a9eff';
 
-  // Load thumbnail for images at any LOD level
+  // Load thumbnail for images
   useEffect(() => {
-    if (isImage && !thumbnailUrl && !textureUrl) {
+    if (isImage && !thumbnailUrl && !imageUrl) {
       loadThumbnail();
+    } else if (thumbnailUrl && !imageUrl) {
+      setImageUrl(thumbnailUrl);
     }
-  }, [isImage, thumbnailUrl, textureUrl]);
-
-  useEffect(() => {
-    if (!textureUrl) return;
-    
-    const loader = new TextureLoader();
-    let loadedTexture: Texture | null = null;
-    
-    loader.load(
-      textureUrl,
-      (tex) => {
-        loadedTexture = tex;
-        setTexture(tex);
-      },
-      undefined,
-      (error) => {
-        console.error('Error loading texture:', error);
-      }
-    );
-    
-    return () => {
-      if (loadedTexture) {
-        loadedTexture.dispose();
-      }
-    };
-  }, [textureUrl]);
+  }, [isImage, thumbnailUrl, imageUrl]);
 
   const loadThumbnail = async () => {
-    if (textureUrl) return;
+    if (imageUrl) return;
     
     try {
       const response = await fetch(`/api/thumb/${file.id}`);
       if (response.ok) {
         const blob = await response.blob();
         const url = URL.createObjectURL(blob);
-        setTextureUrl(url);
+        setImageUrl(url);
         setThumbnail(file.id, url);
         markLoaded(file.id);
       }
@@ -95,8 +107,7 @@ export function FileObject({ file, lod }: FileObjectProps) {
     }
   };
 
-  const handleClick = (e: any) => {
-    e.stopPropagation();
+  const handleClick = () => {
     if (!file.position) return;
     
     const [x, y, z] = file.position;
@@ -114,8 +125,7 @@ export function FileObject({ file, lod }: FileObjectProps) {
     });
   };
 
-  const handlePointerOver = (e: any) => {
-    e.stopPropagation();
+  const handlePointerOver = () => {
     setHoveredFile(file.id);
     document.body.style.cursor = 'pointer';
   };
@@ -141,428 +151,157 @@ export function FileObject({ file, lod }: FileObjectProps) {
     }
     
     // Hover animation
-    const targetScale = isHovered ? 1.2 : 1;
+    const targetScale = isHovered ? 1.15 : 1;
     setHoverScale(prev => prev + (targetScale - prev) * 0.1);
   });
 
   if (!file.position) return null;
 
   const [x, y, z] = file.position;
-  const baseScale = Math.max(0.8, Math.min(2, file.size / 200000));
-  
-  // Fade non-selected files when focused
   const opacity = isFocused && !isSelected ? 0.3 : 1;
 
-  // FAR LOD - small square thumbnail for images, file icon for others
-  if (lod === 'point') {
-    if (isImage && texture) {
-      // Small square image thumbnail
-      return (
-        <group 
-          ref={groupRef}
-          position={[x, y, z]} 
-          onClick={handleClick} 
-          onPointerOver={handlePointerOver}
-          onPointerOut={handlePointerOut}
-        >
-          <mesh scale={1.2 * hoverScale}>
-            <planeGeometry args={[1.5, 1.5]} />
-            <meshBasicMaterial
-              map={texture}
-              transparent
-              opacity={opacity}
-            />
-          </mesh>
-          {/* Glow border */}
-          <mesh scale={1.4 * hoverScale} position={[0, 0, -0.05]}>
-            <planeGeometry args={[1.5, 1.5]} />
-            <meshBasicMaterial 
-              color={fileColor}
-              transparent 
-              opacity={0.2 * opacity}
-              blending={AdditiveBlending}
-            />
-          </mesh>
-          {isHovered && (
-            <Billboard position={[0, 1.5, 0]}>
-              <Text
-                fontSize={0.6}
-                color="#fff"
-                anchorX="center"
-                anchorY="middle"
-                outlineWidth={0.04}
-                outlineColor="#000"
-              >
-                {file.name}
-              </Text>
-            </Billboard>
-          )}
-        </group>
-      );
-    } else if (isImage && !texture) {
-      // Loading placeholder for image
-      return (
-        <group 
-          ref={groupRef}
-          position={[x, y, z]} 
-          onClick={handleClick} 
-          onPointerOver={handlePointerOver}
-          onPointerOut={handlePointerOut}
-        >
-          <mesh scale={1 * hoverScale}>
-            <planeGeometry args={[1.5, 1.5]} />
-            <meshBasicMaterial
-              color="#333"
-              transparent
-              opacity={0.5 * opacity}
-            />
-          </mesh>
-          <Billboard>
-            <Text
-              fontSize={0.8}
-              color={fileColor}
-              anchorX="center"
-              anchorY="middle"
-            >
-              ◻
-            </Text>
-          </Billboard>
-          {isHovered && (
-            <Billboard position={[0, 1.5, 0]}>
-              <Text
-                fontSize={0.6}
-                color="#fff"
-                anchorX="center"
-                anchorY="middle"
-                outlineWidth={0.04}
-                outlineColor="#000"
-              >
-                {file.name}
-              </Text>
-            </Billboard>
-          )}
-        </group>
-      );
-    } else {
-      // File icon for non-images
-      return (
-        <group 
-          ref={groupRef}
-          position={[x, y, z]} 
-          onClick={handleClick} 
-          onPointerOver={handlePointerOver}
-          onPointerOut={handlePointerOut}
-        >
-          {/* File icon background */}
-          <mesh scale={1 * hoverScale}>
-            <planeGeometry args={[1.2, 1.5]} />
-            <meshBasicMaterial 
-              color="#1a1a2e"
-              transparent 
-              opacity={0.9 * opacity}
-            />
-          </mesh>
-          {/* Folded corner */}
-          <mesh position={[0.35, 0.5, 0.01]} scale={0.3 * hoverScale}>
-            <planeGeometry args={[1, 1]} />
-            <meshBasicMaterial 
-              color="#2a2a4e"
-              transparent 
-              opacity={0.9 * opacity}
-            />
-          </mesh>
-          {/* File type icon */}
-          <Billboard>
-            <Text
-              fontSize={0.6}
-              color={fileColor}
-              anchorX="center"
-              anchorY="middle"
-            >
-              {FILE_ICONS[file.type] || '◻'}
-            </Text>
-          </Billboard>
-          {/* Extension label */}
-          <Billboard position={[0, -0.5, 0.01]}>
-            <Text
-              fontSize={0.25}
-              color={fileColor}
-              anchorX="center"
-              anchorY="middle"
-            >
-              {file.extension.toUpperCase()}
-            </Text>
-          </Billboard>
-          {/* Glow */}
-          <mesh scale={1.2 * hoverScale} position={[0, 0, -0.05]}>
-            <planeGeometry args={[1.2, 1.5]} />
-            <meshBasicMaterial 
-              color={fileColor}
-              transparent 
-              opacity={0.15 * opacity}
-              blending={AdditiveBlending}
-            />
-          </mesh>
-          {isHovered && (
-            <Billboard position={[0, 1.5, 0]}>
-              <Text
-                fontSize={0.6}
-                color="#fff"
-                anchorX="center"
-                anchorY="middle"
-                outlineWidth={0.04}
-                outlineColor="#000"
-              >
-                {file.name}
-              </Text>
-            </Billboard>
-          )}
-        </group>
-      );
-    }
-  }
+  // Size based on LOD - bigger sizes
+  const sizes = {
+    point: { img: 150, icon: 150 },
+    icon: { img: 250, icon: 250 },
+    preview: { img: 750, icon: 750 }
+  };
+  
+  const size = sizes[lod];
 
-  // MID LOD - larger view
-  if (lod === 'icon') {
-    if (isImage && texture) {
-      return (
-        <group 
-          ref={groupRef} 
-          position={[x, y, z]} 
-          onClick={handleClick} 
-          onPointerOver={handlePointerOver}
-          onPointerOut={handlePointerOut}
+  return (
+    <group ref={groupRef} position={[x, y, z]}>
+      {/* Glow effect behind */}
+      <mesh scale={hoverScale * (lod === 'preview' ? 3 : lod === 'icon' ? 2 : 1.2)} position={[0, 0, -0.1]}>
+        <planeGeometry args={[2, 2]} />
+        <meshBasicMaterial 
+          color={fileColor}
+          transparent 
+          opacity={0.15 * opacity * (isHovered ? 1.5 : 1)}
+          blending={AdditiveBlending}
+        />
+      </mesh>
+      
+      <Html
+        center
+        distanceFactor={lod === 'preview' ? 8 : lod === 'icon' ? 12 : 18}
+        style={{
+          opacity,
+          transition: 'opacity 0.3s, transform 0.2s',
+          transform: `scale(${hoverScale})`,
+          pointerEvents: 'auto'
+        }}
+        occlude={false}
+      >
+        <div
+          onClick={handleClick}
+          onMouseEnter={handlePointerOver}
+          onMouseLeave={handlePointerOut}
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            cursor: 'pointer',
+            userSelect: 'none'
+          }}
         >
-          <mesh scale={baseScale * 1.5 * hoverScale}>
-            <planeGeometry args={[2, 2]} />
-            <meshBasicMaterial
-              map={texture}
-              transparent
-              opacity={opacity}
-            />
-          </mesh>
-          <mesh scale={baseScale * 1.7 * hoverScale} position={[0, 0, -0.05]}>
-            <planeGeometry args={[2, 2]} />
-            <meshBasicMaterial 
-              color={fileColor}
-              transparent 
-              opacity={0.2 * opacity}
-              blending={AdditiveBlending}
-            />
-          </mesh>
-          <Billboard position={[0, baseScale * 1.5 + 0.8, 0]}>
-            <Text
-              fontSize={0.5}
-              color="#fff"
-              anchorX="center"
-              anchorY="middle"
-              maxWidth={4}
-              outlineWidth={0.02}
-              outlineColor="#000"
+          {isImage ? (
+            <div
+              style={{
+                width: size.img,
+                height: size.img,
+                borderRadius: 6,
+                overflow: 'hidden',
+                border: `2px solid ${isHovered ? fileColor : 'rgba(255,255,255,0.3)'}`,
+                boxShadow: isHovered 
+                  ? `0 0 24px ${fileColor}80, 0 6px 16px rgba(0,0,0,0.6)` 
+                  : '0 4px 12px rgba(0,0,0,0.4)',
+                background: '#fff',
+                transition: 'border 0.2s, box-shadow 0.2s'
+              }}
+            >
+              {imageUrl ? (
+                <img
+                  src={imageUrl}
+                  alt={file.name}
+                  onLoad={() => setImageLoaded(true)}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    opacity: imageLoaded ? 1 : 0,
+                    transition: 'opacity 0.3s'
+                  }}
+                />
+              ) : (
+                <div style={{ 
+                  width: '100%', 
+                  height: '100%', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  background: '#fff'
+                }}>
+                  <FileIcon type="image" size={size.icon * 0.6} />
+                </div>
+              )}
+            </div>
+          ) : (
+            <div
+              style={{
+                width: size.icon,
+                height: size.icon * 1.2,
+                borderRadius: 6,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: 'linear-gradient(135deg, #1a1a2e, #0a0a15)',
+                border: `2px solid ${isHovered ? fileColor : 'rgba(255,255,255,0.15)'}`,
+                boxShadow: isHovered 
+                  ? `0 0 20px ${fileColor}80, 0 4px 12px rgba(0,0,0,0.5)` 
+                  : '0 4px 12px rgba(0,0,0,0.5)',
+                transition: 'border 0.2s, box-shadow 0.2s',
+                padding: 8
+              }}
+            >
+              <FileIcon type={file.type} size={size.icon * 0.6} />
+              <div style={{
+                marginTop: 4,
+                fontSize: Math.max(8, size.icon * 0.15),
+                color: fileColor,
+                fontFamily: 'monospace',
+                fontWeight: 600,
+                textTransform: 'uppercase'
+              }}>
+                {file.extension}
+              </div>
+            </div>
+          )}
+          
+          {/* Filename label */}
+          {(isHovered || lod === 'preview') && (
+            <div
+              style={{
+                marginTop: 8,
+                padding: '4px 8px',
+                background: 'rgba(0,0,0,0.8)',
+                borderRadius: 4,
+                fontSize: lod === 'preview' ? 12 : 10,
+                color: '#fff',
+                maxWidth: size.img + 40,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                fontFamily: 'system-ui, sans-serif',
+                textShadow: '0 1px 2px rgba(0,0,0,0.5)'
+              }}
             >
               {file.name}
-            </Text>
-          </Billboard>
-        </group>
-      );
-    } else {
-      // File icon for non-images
-      return (
-        <group 
-          ref={groupRef} 
-          position={[x, y, z]} 
-          onClick={handleClick} 
-          onPointerOver={handlePointerOver}
-          onPointerOut={handlePointerOut}
-        >
-          {/* File icon background */}
-          <mesh scale={baseScale * 1.2 * hoverScale}>
-            <planeGeometry args={[1.8, 2.2]} />
-            <meshBasicMaterial 
-              color="#1a1a2e"
-              transparent 
-              opacity={0.95 * opacity}
-            />
-          </mesh>
-          {/* Folded corner */}
-          <mesh position={[0.5 * baseScale, 0.7 * baseScale, 0.01]} scale={0.4 * baseScale * hoverScale}>
-            <planeGeometry args={[1, 1]} />
-            <meshBasicMaterial 
-              color="#2a2a4e"
-              transparent 
-              opacity={0.95 * opacity}
-            />
-          </mesh>
-          {/* File type icon */}
-          <Billboard>
-            <Text
-              fontSize={1}
-              color={fileColor}
-              anchorX="center"
-              anchorY="middle"
-            >
-              {FILE_ICONS[file.type] || '◻'}
-            </Text>
-          </Billboard>
-          {/* Extension label */}
-          <Billboard position={[0, -0.8 * baseScale, 0.01]}>
-            <Text
-              fontSize={0.4}
-              color={fileColor}
-              anchorX="center"
-              anchorY="middle"
-            >
-              {file.extension.toUpperCase()}
-            </Text>
-          </Billboard>
-          {/* Glow */}
-          <mesh scale={baseScale * 1.4 * hoverScale} position={[0, 0, -0.05]}>
-            <planeGeometry args={[1.8, 2.2]} />
-            <meshBasicMaterial 
-              color={fileColor}
-              transparent 
-              opacity={0.15 * opacity}
-              blending={AdditiveBlending}
-            />
-          </mesh>
-          <Billboard position={[0, baseScale * 1.5 + 0.5, 0]}>
-            <Text
-              fontSize={0.5}
-              color="#fff"
-              anchorX="center"
-              anchorY="middle"
-              maxWidth={4}
-              outlineWidth={0.02}
-              outlineColor="#000"
-            >
-              {file.name}
-            </Text>
-          </Billboard>
-        </group>
-      );
-    }
-  }
-
-  // NEAR LOD - full preview
-  if (lod === 'preview') {
-    if (isImage && texture) {
-      return (
-        <group 
-          ref={groupRef} 
-          position={[x, y, z]} 
-          onClick={handleClick} 
-          onPointerOver={handlePointerOver}
-          onPointerOut={handlePointerOut}
-        >
-          <mesh ref={meshRef} scale={baseScale * 2 * hoverScale}>
-            <planeGeometry args={[2, 2]} />
-            <meshBasicMaterial
-              map={texture}
-              transparent
-              opacity={opacity}
-            />
-          </mesh>
-          <mesh scale={baseScale * 2.2 * hoverScale} position={[0, 0, -0.1]}>
-            <planeGeometry args={[2, 2]} />
-            <meshBasicMaterial 
-              color={fileColor}
-              transparent 
-              opacity={0.2 * opacity}
-              blending={AdditiveBlending}
-            />
-          </mesh>
-          <Billboard position={[0, baseScale * 2 + 1, 0]}>
-            <Text
-              fontSize={0.4}
-              color="#fff"
-              anchorX="center"
-              anchorY="middle"
-              maxWidth={5}
-              outlineWidth={0.02}
-              outlineColor="#000"
-            >
-              {file.name}
-            </Text>
-          </Billboard>
-        </group>
-      );
-    } else {
-      // Large file icon for non-images
-      return (
-        <group 
-          ref={groupRef} 
-          position={[x, y, z]} 
-          onClick={handleClick} 
-          onPointerOver={handlePointerOver}
-          onPointerOut={handlePointerOut}
-        >
-          {/* File icon background */}
-          <mesh scale={baseScale * 1.8 * hoverScale}>
-            <planeGeometry args={[2, 2.5]} />
-            <meshBasicMaterial 
-              color="#1a1a2e"
-              transparent 
-              opacity={0.95 * opacity}
-            />
-          </mesh>
-          {/* Folded corner */}
-          <mesh position={[0.6 * baseScale, 0.9 * baseScale, 0.01]} scale={0.5 * baseScale * hoverScale}>
-            <planeGeometry args={[1, 1]} />
-            <meshBasicMaterial 
-              color="#2a2a4e"
-              transparent 
-              opacity={0.95 * opacity}
-            />
-          </mesh>
-          {/* File type icon */}
-          <Billboard>
-            <Text
-              fontSize={1.5}
-              color={fileColor}
-              anchorX="center"
-              anchorY="middle"
-            >
-              {FILE_ICONS[file.type] || '◻'}
-            </Text>
-          </Billboard>
-          {/* Extension label */}
-          <Billboard position={[0, -1 * baseScale, 0.01]}>
-            <Text
-              fontSize={0.5}
-              color={fileColor}
-              anchorX="center"
-              anchorY="middle"
-            >
-              {file.extension.toUpperCase()}
-            </Text>
-          </Billboard>
-          {/* Glow */}
-          <mesh scale={baseScale * 2 * hoverScale} position={[0, 0, -0.1]}>
-            <planeGeometry args={[2, 2.5]} />
-            <meshBasicMaterial 
-              color={fileColor}
-              transparent 
-              opacity={0.2 * opacity}
-              blending={AdditiveBlending}
-            />
-          </mesh>
-          <Billboard position={[0, baseScale * 2 + 0.8, 0]}>
-            <Text
-              fontSize={0.4}
-              color="#fff"
-              anchorX="center"
-              anchorY="middle"
-              maxWidth={5}
-              outlineWidth={0.02}
-              outlineColor="#000"
-            >
-              {file.name}
-            </Text>
-          </Billboard>
-        </group>
-      );
-    }
-  }
-
-  return null;
+            </div>
+          )}
+        </div>
+      </Html>
+    </group>
+  );
 }
