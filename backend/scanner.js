@@ -11,12 +11,16 @@ class FileScanner extends EventEmitter {
     this.watcher = null;
   }
 
-  async scanDirectory(dirPath) {
+  async scanDirectory(dirPaths) {
     if (this.scanning) return;
     this.scanning = true;
 
+    const paths = Array.isArray(dirPaths) ? dirPaths : [dirPaths];
+
     try {
-      await this._scanRecursive(dirPath, dirPath);
+      for (const dirPath of paths) {
+        await this._scanRecursive(dirPath, dirPath);
+      }
       this.emit('scan-complete', new Date().toISOString());
     } catch (error) {
       console.error('Scan error:', error);
@@ -73,10 +77,10 @@ class FileScanner extends EventEmitter {
     return 'binary';
   }
 
-  start(rootPath) {
-    this.scanDirectory(rootPath);
+  start(rootPaths) {
+    this.scanDirectory(rootPaths);
     
-    this.watcher = chokidar.watch(rootPath, {
+    this.watcher = chokidar.watch(rootPaths, {
       ignored: /(^|[\/\\])\../,
       persistent: true,
       ignoreInitial: true

@@ -65,7 +65,7 @@ function VRButton() {
 }
 
 function App() {
-  const { vrEnabled, setVREnabled } = useStore();
+  const { setVREnabled } = useStore();
 
   useEffect(() => {
     const checkVR = () => {
@@ -84,7 +84,6 @@ function App() {
         camera={{ position: [0, 0, 100], fov: 75 }}
         gl={{ antialias: true, alpha: false }}
         dpr={[1, 2]}
-        vr={vrEnabled}
       >
         <Scene />
       </Canvas>

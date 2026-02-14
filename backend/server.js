@@ -14,7 +14,10 @@ app.use(cors());
 app.use(express.json());
 
 const PORT = process.env.PORT || 3001;
-const SCAN_DIR = process.env.SCAN_DIR || process.cwd();
+const SCAN_DIRS = [
+  process.env.SCAN_DIRS,
+  "C:\\Users\\krris\\Pictures\\toys"
+];
 
 const CURSOR_SIZE = 100;
 
@@ -22,7 +25,7 @@ app.get('/api/files', async (req, res) => {
   const cursor = parseInt(req.query.cursor || '0');
   const files = fileStore.getFiles(cursor, CURSOR_SIZE);
   const nextCursor = cursor + files.length;
-  
+
   res.json({
     files,
     nextCursor: files.length === CURSOR_SIZE ? nextCursor : null
@@ -32,11 +35,11 @@ app.get('/api/files', async (req, res) => {
 app.get('/api/thumb/:id', async (req, res) => {
   const { id } = req.params;
   const file = fileStore.getFile(id);
-  
+
   if (!file) {
     return res.status(404).json({ error: 'File not found' });
   }
-  
+
   try {
     const thumbnail = await thumbnailGenerator.generate(file.absolutePath, file.type);
     res.setHeader('Content-Type', 'image/jpeg');
@@ -81,9 +84,9 @@ fileScanner.on('scan-complete', (timestamp) => {
   broadcast({ type: 'scan-complete', totalFiles: fileStore.getTotalCount() });
 });
 
-fileScanner.start(SCAN_DIR);
+fileScanner.start(SCAN_DIRS);
 
 server.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
-  console.log(`Scanning directory: ${SCAN_DIR}`);
+  console.log(`Scanning directories: ${SCAN_DIRS.join(', ')}`);
 });

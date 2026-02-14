@@ -20,34 +20,34 @@ export function distributeFilesInSpace(files: FileData[]): FileData[] {
   const sizes = files.map(f => f.size);
   const minSize = Math.min(...sizes);
   const maxSize = Math.max(...sizes);
-  
+
   const innerRadius = 7;
   const outerRadius = 70;
 
-  return files.map((file, index) => {
+  return files.map((file, _index) => {
     const random = seededRandom(hashString(file.id));
-    
+
     // Map file size: large files near center, small files farther
-    const sizeRatio = maxSize === minSize 
-      ? 0.5 
+    const sizeRatio = maxSize === minSize
+      ? 0.5
       : (file.size - minSize) / (maxSize - minSize);
-    
+
     // Large files get smaller radius (near center)
     const baseRadius = outerRadius - sizeRatio * (outerRadius - innerRadius);
-    
+
     // Add organic randomness
     const radiusVariance = baseRadius * 0.3 * (random() - 0.5);
     const radius = Math.max(innerRadius, baseRadius + radiusVariance);
-    
+
     // Spherical distribution
     const theta = random() * 2 * Math.PI;
     const phi = Math.acos(2 * random() - 1);
-    
+
     // Convert to cartesian
     let x = radius * Math.sin(phi) * Math.cos(theta);
     let y = radius * Math.sin(phi) * Math.sin(theta);
     let z = radius * Math.cos(phi);
-    
+
     // Add perlin-like noise for organic feel
     const noiseScale = 0.02;
     const noiseStrength = radius * 0.1;

@@ -16,8 +16,8 @@ class ThumbnailGenerator {
   async _generateImageThumbnail(filePath) {
     try {
       return await sharp(filePath)
-        .resize(256, 256, { fit: 'inside', withoutEnlargement: true })
-        .jpeg({ quality: 85 })
+        .resize(500, 500, { fit: 'inside', withoutEnlargement: true })
+        .jpeg({ quality: 90 })
         .toBuffer();
     } catch (error) {
       return await this._generateIconThumbnail('image');
@@ -29,7 +29,7 @@ class ThumbnailGenerator {
   }
 
   async _generateIconThumbnail(fileType) {
-    const size = 256;
+    const size = 500;
     const canvas = sharp({
       create: {
         width: size,
@@ -40,7 +40,7 @@ class ThumbnailGenerator {
     });
 
     return await canvas
-      .jpeg({ quality: 85 })
+      .jpeg({ quality: 90 })
       .toBuffer();
   }
 }

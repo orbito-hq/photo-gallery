@@ -1,7 +1,7 @@
 import { useFrame, useThree } from '@react-three/fiber';
 import { useRef, useMemo } from 'react';
 import { Vector3, Frustum, Matrix4 } from 'three';
-import { useStore, FileData } from '../store';
+import { FileData } from '../store';
 import { useSpatialHash } from '../hooks/useSpatialHash';
 import { FileObject } from './FileObject';
 
@@ -15,14 +15,14 @@ const VIEW_DISTANCE = 600;
 
 export function FileCloud() {
   const { camera } = useThree();
-  const { files } = useStore();
+
   const cameraPosition = useRef(new Vector3());
   const frustum = useRef(new Frustum());
   const projScreenMatrix = useRef(new Matrix4());
-  
+
   useFrame(() => {
     cameraPosition.current.copy(camera.position);
-    
+
     projScreenMatrix.current.multiplyMatrices(
       camera.projectionMatrix,
       camera.matrixWorldInverse
@@ -41,7 +41,7 @@ export function FileCloud() {
 
     visibleFiles.forEach(file => {
       if (!file.position) return;
-      
+
       const filePos = new Vector3(...file.position);
       const distance = cameraPosition.current.distanceTo(filePos);
 
@@ -63,12 +63,12 @@ export function FileCloud() {
       {filesByLOD.preview.map(file => (
         <FileObject key={file.id} file={file} lod="preview" />
       ))}
-      
+
       {/* Mid: Square planes or icons */}
       {filesByLOD.icon.map(file => (
         <FileObject key={file.id} file={file} lod="icon" />
       ))}
-      
+
       {/* Far: Small thumbnails for images, file icons for others */}
       {filesByLOD.point.map(file => (
         <FileObject key={file.id} file={file} lod="point" />

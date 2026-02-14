@@ -2,7 +2,6 @@ import { useMemo } from 'react';
 import { Vector3 } from 'three';
 import { useStore, FileData } from '../store';
 
-const CELL_SIZE = 50;
 
 export function useSpatialHash(cameraPosition: Vector3, viewDistance: number) {
   const { files } = useStore();
@@ -13,10 +12,10 @@ export function useSpatialHash(cameraPosition: Vector3, viewDistance: number) {
 
     for (const file of filesArray) {
       if (!file.position) continue;
-      
+
       const [x, y, z] = file.position;
       const distance = cameraPosition.distanceTo(new Vector3(x, y, z));
-      
+
       if (distance <= viewDistance) {
         visibleFiles.push(file);
       }
