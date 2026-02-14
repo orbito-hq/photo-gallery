@@ -4,7 +4,7 @@ import { useStore } from '../store';
 const API_BASE = '/api';
 
 export function useFileLoader() {
-  const { cursor, setCursor, setTotalFiles, addFile } = useStore();
+  const { cursor, setCursor, addFile } = useStore();
   const loadingRef = useRef(false);
 
   const loadFiles = async (startCursor: number = 0) => {
@@ -14,15 +14,12 @@ export function useFileLoader() {
     try {
       const response = await fetch(`${API_BASE}/files?cursor=${startCursor}`);
       const data = await response.json();
-      
+
       data.files.forEach((file: any) => {
         addFile(file);
       });
-      
+
       setCursor(data.nextCursor);
-      if (data.files.length > 0) {
-        setTotalFiles(startCursor + data.files.length);
-      }
     } catch (error) {
       console.error('Error loading files:', error);
     } finally {

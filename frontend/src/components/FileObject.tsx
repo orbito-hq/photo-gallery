@@ -105,6 +105,11 @@ export function FileObject({ file, lod }: FileObjectProps) {
     document.body.style.cursor = 'auto';
   };
 
+  const handleDoubleClick = (e: any) => {
+    e.stopPropagation();
+    window.open(`/api/file/${file.id}`, '_blank');
+  };
+
   useFrame((state) => {
     if (!file.position) return;
 
@@ -159,6 +164,7 @@ export function FileObject({ file, lod }: FileObjectProps) {
             opacity={opacity}
             side={DoubleSide}
             onClick={handleClick}
+            onDoubleClick={handleDoubleClick}
             onPointerOver={handlePointerOver}
             onPointerOut={handlePointerOut}
           />
@@ -166,6 +172,7 @@ export function FileObject({ file, lod }: FileObjectProps) {
           <mesh
             ref={meshRef}
             onClick={handleClick}
+            onDoubleClick={handleDoubleClick}
             onPointerOver={handlePointerOver}
             onPointerOut={handlePointerOut}
           >

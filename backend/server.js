@@ -50,6 +50,17 @@ app.get('/api/thumb/:id', async (req, res) => {
   }
 });
 
+app.get('/api/file/:id', (req, res) => {
+  const { id } = req.params;
+  const file = fileStore.getFile(id);
+
+  if (!file) {
+    return res.status(404).json({ error: 'File not found' });
+  }
+
+  res.sendFile(file.absolutePath);
+});
+
 app.get('/api/stats', (req, res) => {
   res.json({
     totalFiles: fileStore.getTotalCount(),

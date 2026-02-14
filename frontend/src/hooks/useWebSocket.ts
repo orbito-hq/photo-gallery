@@ -8,23 +8,25 @@ export function useWebSocket() {
   useEffect(() => {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const ws = new WebSocket(`${protocol}//${window.location.hostname}:3001`);
-    
+
     ws.onopen = () => {
       console.log('WebSocket connected');
     };
 
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
-      
+
       switch (data.type) {
         case 'connected':
           setTotalFiles(data.totalFiles || 0);
           break;
         case 'file-added':
           addFile(data.file);
+          setTotalFiles(useStore.getState().totalFiles + 1);
           break;
         case 'file-removed':
           removeFile(data.id);
+          setTotalFiles(useStore.getState().totalFiles - 1);
           break;
         case 'scan-complete':
           setTotalFiles(data.totalFiles || 0);
