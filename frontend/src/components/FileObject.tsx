@@ -1,7 +1,7 @@
 import { useRef, useEffect, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { Vector3, AdditiveBlending, Mesh, DoubleSide, PlaneGeometry } from 'three';
-import { Image, Text } from '@react-three/drei';
+import { Image, Text, useTexture } from '@react-three/drei';
 import { useStore, FileData } from '../store';
 
 interface FileObjectProps {
@@ -36,6 +36,17 @@ export function FileObject({ file, lod }: FileObjectProps) {
   const isHovered = hoveredFileId === file.id;
   const isImage = file.type === 'image';
   const fileColor = FILE_COLORS[file.type] || '#4a9eff';
+
+  // Determine icon path
+  const iconPath = (() => {
+    if (file.type === 'video') return '/icons/video.svg';
+    if (file.type === 'image') return '/icons/file.svg'; // Default/Backup
+    if (file.extension.toLowerCase() === 'pdf') return '/icons/pdf.svg';
+    if (file.type === 'text') return '/icons/text.svg';
+    return '/icons/file.svg';
+  })();
+
+  const iconTexture = useTexture(iconPath);
 
   // Load thumbnail for images
   useEffect(() => {
@@ -160,30 +171,12 @@ export function FileObject({ file, lod }: FileObjectProps) {
           >
             <planeGeometry args={[1, 1]} />
             <meshBasicMaterial
-              color={isImage ? '#222' : '#111'}
+              map={iconTexture}
+              color="white"
               transparent
-              opacity={0.8 * opacity}
+              opacity={0.9 * opacity}
               side={DoubleSide}
             />
-            {/* Border */}
-            <lineSegments>
-              <edgesGeometry args={[new PlaneGeometry(1, 1)]} />
-              <lineBasicMaterial color={isHovered ? fileColor : '#555'} transparent opacity={opacity} />
-            </lineSegments>
-
-            {!isImage && (
-              <Text
-                position={[0, 0, 0.01]}
-                fontSize={0.25}
-                color={fileColor}
-                anchorX="center"
-                anchorY="middle"
-                font="https://fonts.gstatic.com/s/jetbrainsmono/v18/tDbY2o-flEEny0FZhsfKu5WU4zr3E_BX0pnF8R-0.woff"
-                fillOpacity={opacity}
-              >
-                {file.extension.toUpperCase()}
-              </Text>
-            )}
           </mesh>
         )}
 
